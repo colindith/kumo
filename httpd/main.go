@@ -31,22 +31,16 @@ func main() {
 
 	// periodic work
 	c := cron.New()
-	c.AddFunc("*/5 * * * * *", periodicFunc)
+	c.AddFunc("5 * * * * *", periodicFunc(server))
+	// c.AddFunc("5 * * * * *", stockCrawler(server))
 	c.Start()
 
-	// 初始化引擎
 	r := gin.Default()
-	// 注册一个路由和处理函数
+
 	r.GET("/", index(server))
-	// 绑定端口，然后启动应用
+
 	r.Run(":8001")
 }
-
-/**
-* 根请求处理函数
-* 所有本次请求相关的方法都在 context 中，完美
-* 输出响应 hello, world
- */
 
 func index(server *machinery.Server) gin.HandlerFunc {
 	return func(context *gin.Context) {
@@ -73,7 +67,17 @@ func index(server *machinery.Server) gin.HandlerFunc {
 		fmt.Println("asyncResult: ", asyncResult)
 	}
 }
-
-func periodicFunc() {
-	fmt.Println("Every minute on the 25 sec")
+func periodicFunc(server *machinery.Server) func() {
+	return func() {
+		fmt.Println("Every minute on the 25 sec")
+		longRunningTask := &tasks.Signature{
+			Name: "long_running_task",
+		}
+		asyncResult, err := server.SendTask(longRunningTask)
+		if err != nil {
+			// failed to send the task
+			// do something with the error
+		}
+		fmt.Println("asyncResult: ", asyncResult)
+	}
 }
