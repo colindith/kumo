@@ -9,7 +9,7 @@ import (
 
 func stockPrice(server *machinery.Server) func() {
 	return func() {
-		fmt.Println("Every minute on the 25 sec")
+		fmt.Println("stockPrice task ~~~~~~~~~~~")
 		longRunningTask := &tasks.Signature{
 			Name: "long_running_task",
 		}
