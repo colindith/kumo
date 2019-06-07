@@ -6,4 +6,4 @@ run:
 		go build -o ./app httpd/main.go
 		./app
 worker:
-		go run packages/machinery/example/machinery.go -c packages/machinery/example/config.yml worker
+		go run services/machinery/machinery.go -c services/machinery/config.yml worker

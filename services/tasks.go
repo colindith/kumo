@@ -1,6 +1,7 @@
 package services
 
 import (
+	"os"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -9,26 +10,44 @@ import (
 	"time"
 	"kumo/httpd/handler/stock"
 	"github.com/jinzhu/gorm"
-	"github.com/RichardKnop/machinery/v1"
+	// "github.com/RichardKnop/machinery/v1"
 )
 
+var db *gorm.DB
+var err error
+
 // Stock Price from Yahoo
-func StockCrawler(server *machinery.Server, db *gorm.DB) func() {
-	return func() {
-		// TODO: Add a table for all stock code
-		// TODO: run through all Taiwan stock here
-		fmt.Println("Starting crawl stock........")
-		codes := []string{"2330"}
-		count := 0
-		for _, code := range codes {
-			err := GetData(code, db)
-			if err != nil {
-				fmt.Println(err.Error())
-			}
-			count++
-		}
-		// return count, nil
+func StockCrawler() error {
+	// Move this init DB code to some where out....
+	dbInfoStr := fmt.Sprintf(
+		"host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
+		os.Getenv("KUMO_POSTGRES_HOST"),
+		os.Getenv("KUMO_POSTGRE_PORT"),
+		os.Getenv("KUMO_POSTGRES_USERNAME"),
+		os.Getenv("KUMO_POSTGRES_DB"),
+		os.Getenv("KUMO_POSTGRES_PASSWORD"),
+	)
+	fmt.Println("dbInfoStr", dbInfoStr)
+	db, err = gorm.Open("postgres", dbInfoStr)
+	if err != nil {
+		fmt.Println(err)
+		return err
 	}
+	defer db.Close()
+
+	// TODO: Add a table for all stock code
+	// TODO: run through all Taiwan stock here
+	fmt.Println("Starting crawl stock........")
+	codes := []string{"2330"}
+	count := 0
+	for _, code := range codes {
+		err := GetData(code, db)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		count++
+	}
+	return nil
 }
 
 func GetData(code string, db *gorm.DB) error {

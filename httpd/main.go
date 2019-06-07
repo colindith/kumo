@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"kumo/services"
+	// "kumo/services"
 	"os"
 	"kumo/httpd/handler/stock"
 
@@ -59,7 +59,8 @@ func main() {
 	// periodic work
 	c := cron.New()
 	c.AddFunc("5 * * * * *", periodicFunc(server))
-	c.AddFunc("5 * * * * *", services.StockCrawler(server, db))
+	// c.AddFunc("5 * * * * *", services.StockCrawler(server, db))
+	c.AddFunc("35 * * * * *", periodicCrawlerFunc(server))
 	c.Start()
 
 	r := gin.Default()
@@ -101,6 +102,20 @@ func periodicFunc(server *machinery.Server) func() {
 			Name: "long_running_task",
 		}
 		asyncResult, err := server.SendTask(longRunningTask)
+		if err != nil {
+			// failed to send the task
+			// do something with the error
+		}
+		fmt.Println("asyncResult: ", asyncResult)
+	}
+}
+func periodicCrawlerFunc(server *machinery.Server) func() {
+	return func() {
+		fmt.Println("periodicCrawlerFunc")
+		crawlerTask := &tasks.Signature{
+			Name: "stock_crawler",
+		}
+		asyncResult, err := server.SendTask(crawlerTask)
 		if err != nil {
 			// failed to send the task
 			// do something with the error
