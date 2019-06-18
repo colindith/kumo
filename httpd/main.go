@@ -61,6 +61,7 @@ func main() {
 	c.AddFunc("5 * * * * *", periodicFunc(server))
 	// c.AddFunc("5 * * * * *", services.StockCrawler(server, db))
 	c.AddFunc("35 * * * * *", periodicCrawlerFunc(server))
+	c.AddFunc("35 * * * * *", periodicMessage())
 	c.Start()
 
 	r := gin.Default()
@@ -121,5 +122,19 @@ func periodicCrawlerFunc(server *machinery.Server) func() {
 			// do something with the error
 		}
 		fmt.Println("asyncResult: ", asyncResult)
+	}
+}
+func periodicMessage() func() {
+	return func() {
+		fmt.Println("in periodicMessage function ~~~~~~~~~~~~~~~~")
+		// crawlerTask := &tasks.Signature{
+		// 	Name: "stock_crawler",
+		// }
+		// asyncResult, err := server.SendTask(crawlerTask)
+		// if err != nil {
+		// 	// failed to send the task
+		// 	// do something with the error
+		// }
+		// fmt.Println("asyncResult: ", asyncResult)
 	}
 }

@@ -10,6 +10,9 @@ import (
 	"time"
 	"kumo/httpd/handler/stock"
 	"github.com/jinzhu/gorm"
+	"log"
+
+	"github.com/streadway/amqp"
 	// "github.com/RichardKnop/machinery/v1"
 )
 
@@ -51,6 +54,8 @@ func StockCrawler() error {
 }
 
 func GetData(code string, db *gorm.DB) error {
+	BroadcastMessage("kumo_broadcast", "yayayay!!message from kumo~~~~~")
+
 	// get response
 	resp, err := http.Get("https://tw.quote.finance.yahoo.net/quote/q?type=tick&perd=1m&mkt=10&sym=" + code)
 	if err != nil {
@@ -134,6 +139,9 @@ func GetData(code string, db *gorm.DB) error {
 		totalSaveCount++
 	}
 
+	// TODO: push the new price info to broker
+	BroadcastMessage("kumo_broadcast", "get data!!!!message from kumo~~~~~")
+
 	fmt.Println(mkt, id, mem)
 	fmt.Println("totalSaveCount: ", totalSaveCount)
 	return nil
@@ -150,4 +158,51 @@ func intToTime(i int) time.Time {
 	i /= 100
 	year := i
 	return time.Date(year, time.Month(month), date, hours, minutes, 0, 0, time.Local)
+}
+
+func failOnError(err error, msg string) {
+	if err != nil {
+		log.Fatalf("%s: %s", msg, err)
+	}
+}
+
+func BroadcastMessage(exchange string, msg string) {
+	rabbitmqHost := os.Getenv("RABBITMQ_HOST")
+	rabbitmqUser := os.Getenv("RABBITMQ_DEFAULT_USER")
+	rabbitmqPass := os.Getenv("RABBITMQ_DEFAULT_PASS")
+	rabbitmqVhost := os.Getenv("RABBITMQ_DEFAULT_VHOST")
+	rabbitmqDial := fmt.Sprintf("amqp://%s:%s@%s:5672/%s", rabbitmqUser, rabbitmqPass, rabbitmqHost, rabbitmqVhost)
+	conn, err := amqp.Dial(rabbitmqDial)
+	failOnError(err, "Failed to connect to RabbitMQ")
+	defer conn.Close()
+
+	ch, err := conn.Channel()
+	failOnError(err, "Failed to open a channel")
+	defer ch.Close()
+
+	err = ch.ExchangeDeclare(
+		exchange,   // name
+		"fanout",     // type
+		true,         // durable
+		false,        // auto-deleted
+		false,        // internal
+		false,        // no-wait
+		nil,          // arguments
+	)
+	failOnError(err, "Failed to declare an exchange")
+
+	// body := bodyFrom(os.Args)
+	// body := "broadcast msg ~~~ ~~~"
+	err = ch.Publish(
+		exchange,   // exchange
+		"",           // routing key
+		false,        // mandatory
+		false,        // immediate
+		amqp.Publishing{
+			ContentType: "text/plain",
+			Body:        []byte(msg),
+		})
+	failOnError(err, "Failed to publish a message")
+
+	log.Printf(" [x] Sent %s", msg)
 }
